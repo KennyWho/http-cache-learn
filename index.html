@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Document</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.4.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fontawesome@5.6.3/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@2.2.1/src/js.cookie.min.js"></script>
+    <style>
+      .spacing {
+        margin: 20px auto;
+      }
+      .board {
+        color: #fff;
+        background: #1b1c1d;
+        height: 100%;
+        padding: 10px;
+      }
+      .line {
+        margin: 5px 0;
+      }
+      code {
+        background-color: rgba(220,220,220,.5);
+        border-radius: 2px;
+        padding: 0 2px;
+      }
+      p {
+        line-height: 1.6;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@2.3.0/dist/socket.io.js"></script>
+
+  </head>
+  <body>
+    <div class="container ui">
+      <div class="spacing"></div>
+      <div class="ui grid">
+        <div class="eight wide column">
+          <form class="ui form warning spacing">
+            <div class="field">
+              <label
+                >Cache-Control
+                <a
+                  target="_blank"
+                  href="https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Headers/Cache-Control"
+                  ><i class="question circle outline icon"></i
+                ></a>
+              </label>
+              <div class="ui selection dropdown cache-control">
+                <input type="hidden"/>
+                <i class="dropdown icon"></i>
+                <div class="default text">Cache-Control</div>
+                <div class="menu">
+                  <div class="item" data-value="-1">Cache-Control</div>
+                  <div class="item" data-value="0">no-store</div>
+                  <div class="item" data-value="1">no-cache</div>
+                  <div class="item disabled" data-value="2">private</div>
+                  <div class="item disabled" data-value="3">public</div>
+                  <div class="item" data-value="4">max-age</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>max-age</label>
+              <div class="ui right labeled input">
+                <input type="max-age" name="maxAge" placeholder="max-age" />
+                <div class="ui basic label">
+                  秒
+                </div>
+              </div>
+            </div>
+
+            <div class="ui divider"></div>
+
+            <div class="field">
+              <label
+                >Expires
+                <a
+                target="_blank"
+                href="https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Headers/Expires"
+                ><i class="question circle outline icon"></i
+              ></a>
+              </label>
+              <div class="ui segment">
+                <div class="field">
+                  <div class="ui toggle checkbox expires">
+                    <input
+                      type="checkbox"
+                      tabindex="0"
+                      class="hidden"
+                    />
+                    <label>Expires</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="ui input action">
+                <input type="text" name="expiresTime" placeholder="格林威治时间数值" />
+                <div class="ui button expireAdd">+10秒</div>
+              </div>
+            </div>
+
+            <div class="ui divider"></div>
+
+            <div class="field">
+              <label
+                >Last-Modified <a
+                target="_blank"
+                href="https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Headers/Last-Modified"
+                ><i class="question circle outline icon"></i
+              ></a>
+              </label>
+              <div class="ui segment">
+                <div class="field">
+                  <div class="ui toggle checkbox last-modified">
+                    <input
+                      type="checkbox"
+                      tabindex="0"
+                      class="hidden"
+                    />
+                    <label>Last-Modified</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="ui divider"></div>
+
+            <div class="field">
+              <label>ETag <a
+                target="_blank"
+                href="https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Headers/ETag"
+                ><i class="question circle outline icon"></i
+              ></a>
+              <div class="ui segment">
+                <div class="field">
+                  <div class="ui toggle checkbox etag">
+                    <input
+                      type="checkbox"
+                      tabindex="0"
+                      class="hidden"
+                    />
+                    <label>ETag</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <button class="ui basic button try" id="try">Try</button>
+              <span>点击后会发送 2 次请求，第一次为清除缓存，第二次为配置的缓存请求</span>
+            </div>
+            <div class="field">
+              <button class="ui basic button try" id="try2">Try</button>
+              <span>发送一次配置的缓存请求</span>
+            </div>
+          </form>
+        </div>
+        <div class="eight wide column">
+          <div class="board"></div>
+        </div>
+        <div class="eight wide column">
+          <h2>过程</h2>
+          <h3>新鲜度</h3>
+          <div class="ui list">
+            <div class="item">是否含有 Cache-Control</div>
+            <div class="item">是否含有 Expires</div>
+            <div class="item">是否含有 Last-Modified</div>
+
+          </div>
+          <p>优先级从上到下，只要找到一个有效的字段，将使用此字段计算缓存寿命。如果未过期（新鲜的），使用缓存副本，否则进行驱逐算法替换资源的新鲜度（缓存检索），旧的副本不会直接被替换，显示会在请求上发起一个缓存验证，附加一个 <code>IF-None-Match</code> 或 <code>If-Modified-Since</code> 头，如果返回 304 ，那么更新新鲜度，否则请求新资源</p>
+          <h3>缓存验证</h3>
+          <div class="ui list">
+            <div class="item">ETag</div>
+            <div class="item">Last-Modified</div>
+          </div>
+          <p>一句话总结一下，是否使用缓存看 Cache-Control，是否重新请求看 Etag. </p>
+        </div>
+        <div class="eight wide column">
+          <ul class="ui list">
+            <li><a href="https://developers.google.com/web/fundamentals/performance/optimizing-content-efficiency/http-caching?hl=zh-CN" target="_blank">HTTP 缓存 - Web fundamentals</a></li>
+            <li><a href="https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Caching_FAQ" target="_blank">HTTP 缓存 - MDN</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <script>
+      $(".ui.checkbox").checkbox();
+      $(".dropdown").dropdown();
+      $('.try').on('click', function (e) {
+        e.preventDefault()
+        socket.emit('config', {
+          etag: $('.etag').checkbox('is checked'),
+          lastModified: $('.last-modified').checkbox('is checked'),
+          expires: $('.expires').checkbox('is checked'),
+          cacheControl: $('.cache-control').dropdown('get value'),
+          maxAge: $('[name=maxAge]').val(),
+          expiresTime: $('[name=expiresTime]').val()
+        }, () => {
+          if($(this).is('#try')) {
+            fetch('/index.js', {
+              headers: {
+                'cache-control': 'no-cache',
+                'x-request-ignore': true
+              }
+            }).then(() => {
+              fetch('/index.js')
+            })
+          } else {
+            fetch('/index.js')
+          }
+
+        })
+      })
+      var socket = io();
+      socket.on('client:log', function(msg){
+        $('.board').append($('<div class="line">').text(msg));
+      })
+      $('.expireAdd').on('click', function () {
+        const val = $('[name=expiresTime]').val() || Date.now()
+        if (val) {
+          $('[name=expiresTime]').val(new Date(Date.now(val) + 1000 * 10).getTime())
+        }
+      })
+    </script>
+  </body>
+</html>
